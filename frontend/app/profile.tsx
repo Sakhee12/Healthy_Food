@@ -88,7 +88,6 @@ export default function ProfileScreen() {
                     <Pressable style={styles.bannerCard}>
                         <Ionicons name="phone-portrait-outline" size={24} color="#555" />
                         <View style={styles.bannerCardTextContainer}>
-                            <Text style={styles.bannerCardTitle}>App update available</Text>
                             <Text style={styles.bannerCardSubtitle}>bug fixes and improvements</Text>
                         </View>
                         <Text style={styles.versionText}>v17.83.2</Text>
