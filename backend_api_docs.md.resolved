@@ -1,0 +1,58 @@
+# Backend API Documentation
+
+This document details all available API endpoints, their expected request data (Body, Params, Query), and required headers.
+
+## Base URL
+All endpoints are prefixed with `/api`.
+
+---
+
+## 1. Authentication (`/api/auth`)
+
+| Method | Endpoint | Description | Request Data (Body/Params) |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/send-otp` | Request a login OTP | **Body**: `{ phone: string }` |
+| `POST` | `/verify-otp` | Verify OTP and login | **Body**: `{ phone: string, otp: string }` |
+| `POST` | `/register` | Register a new user | **Body**: `{ name, email, password, phone, role_id }` |
+| `POST` | `/login` | Login with credentials | **Body**: `{ email, password }` |
+| `POST` | `/forgot-password`| Reset password trigger | **Body**: `{ email: string }` |
+
+---
+
+## 2. Admin Management (`/api/admin`)
+*Requires `Authorization: Bearer <token>` header.*
+
+| Method | Endpoint | Description | Request Data |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/users` | List all users | N/A |
+| `PUT` | `/update-role` | Change user role | **Body**: `{ id: number, role: string }` |
+| `DELETE` | `/delete-user/:id` | Remove a user | **Params**: `id` |
+| `GET` | `/categories` | List categories | **Query**: Filter fields (optional) |
+| `POST` | `/categories/add` | Add category | **Body**: Metadata; **Files**: `category_image_file`, `banner_image_file` |
+| `PUT` | `/categories/update/:id` | Update category | **Params**: `id`; **Body**: Fields; **Files**: Image files |
+| `DELETE`| `/categories/delete/:id` | Delete category | **Params**: `id` |
+| `GET` | `/orders` | Fetch orders | N/A |
+| `PUT` | `/orders/update-status`| Update order status | **Body**: Status update details |
+
+---
+
+## 3. Product Management (`/api/products`)
+*Requires `Authorization: Bearer <token>` header.*
+
+| Method | Endpoint | Description | Request Data |
+| :--- | :--- | :--- | : :--- |
+| `GET` | `/` | List all products | **Query**: `{ name: string }` (optional) |
+| `POST` | `/add` | Add new product | **Body**: Metadata; **Files**: `product_image_file`, `image2_file`, `image3_file` |
+| `PUT` | `/update/:id` | Update product | **Params**: `id`; **Body**: Fields; **Files**: Product images |
+| `DELETE`| `/delete/:id` | Delete product | **Params**: `id` |
+
+---
+
+## 4. System
+
+| Method | Endpoint | Description | Request Data |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/health` | Health check | N/A |
+
+> [!NOTE]
+> For `multipart/form-data` requests (adding products/categories), ensure you use the exact file field names listed above to ensure successful image processing.

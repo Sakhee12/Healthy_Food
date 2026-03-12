@@ -1,0 +1,82 @@
+# Healthy Food - API Documentation & Postman Guide
+
+This document provides a complete list of backend API endpoints, including how to use filters, sorting, and how to test them using Postman.
+
+## 🚀 Postman Setup Instructions
+
+1.  **Base URL**: `http://localhost:5001/api`
+2.  **Authentication**:
+    -   For protected routes, go to the **Headers** tab in Postman.
+    -   Add a new key: `Authorization`.
+    -   Value: `Bearer YOUR_JWT_TOKEN`.
+    -   *(Tip: You can use `dev_token_bypass` as a token for local development testing).*
+3.  **Content-Type**: For `POST` and `PUT` requests (except file uploads), set `Content-Type: application/json` in the Headers.
+4.  **File Uploads**: Use `form-data` in the **Body** tab. Select `File` type for image fields (e.g., `product_image_file`).
+
+---
+
+## 📂 Product API (`/api/products`)
+
+### **GET /** - List All Products
+Used for the shop page. Supports advanced filtering and sorting.
+
+**Query Parameters:**
+- `search`: Filter by product name (e.g., `?search=apple`).
+- `category`: Filter by Category ID (e.g., `?category=2`).
+- `brand`: Filter by brand name.
+- `minPrice` / `maxPrice`: Filter by price range.
+- `rating`: Filter by minimum rating (e.g., `?rating=4`).
+- `page`: Pagination page number (default: 1).
+- `limit`: Products per page (default: 12).
+- `sort`: Sorting options:
+    - `price_asc`: Lowest price first.
+    - `price_desc`: Highest price first.
+    - `rating`: Best rated first.
+    - `newest`: Most recently added.
+    - `discount`: Highest discount first.
+
+---
+
+## 📂 Admin & Category API (`/api/admin`)
+
+### **GET /categories**
+Supports basic filtering for the admin panel.
+- `category_name`: Filter by name.
+- `status`: `1` for Active, `0` for Inactive.
+- `parent_id`: Filter by parent category.
+
+### **GET /users** (Protected)
+Requires `Superadmin` or [Admin](file:///c:/healthyfood/HealthyFood/admin-frontend/admin-frontend/src/views/admin/admin-management/AdminManagement.jsx#15-195). Returns all registered users.
+
+### **PUT /update-role** (Protected)
+Requires `Superadmin` or [Admin](file:///c:/healthyfood/HealthyFood/admin-frontend/admin-frontend/src/views/admin/admin-management/AdminManagement.jsx#15-195).
+- **Body**: `{"id": 10, "role_id": 2}`
+
+### **GET /roles** (Protected)
+Returns the list of all available roles (ID and Name).
+
+---
+
+## 📂 Authentication API (`/api/auth`)
+
+| Method | Endpoint | Description | Body Example |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/auth/send-otp` | Send OTP to phone | `{"phone": "1234567890"}` |
+| `POST` | `/auth/verify-otp` | Verify and Login | `{"phone": "1234567890", "otp": "123456"}` |
+| `POST` | `/auth/login` | Email Login | `{"email": "admin@test.com", "password": "..."}`|
+| `POST` | `/auth/register` | Register User | `{"name": "...", "email": "...", "password": "..."}` |
+
+---
+
+## 🛠️ Sorting & Filtering Quick Reference
+
+| Feature | Param | Values |
+| :--- | :--- | :--- |
+| **Search** | `search` | String (any text) |
+| **Sort Price** | `sort` | `price_asc`, `price_desc` |
+| **Sort New** | `sort` | `newest` |
+| **Filter Stock**| (N/A) | Managed via Stock column logic |
+| **Pagination**| `page`, `limit` | Numbers |
+
+> [!IMPORTANT]
+> Always ensure the backend server is running (`node app.js`) before testing in Postman.
