@@ -16,16 +16,11 @@ import {
     Animated
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { fetchProducts, Product } from '@/api/product';
+import { ProductCard } from '@/components/ProductCard';
 import { BASE_URL } from '@/api/api';
 
 const { width, height: screenHeight } = Dimensions.get('window');
-
-// Mock data for related content
-const SIMILAR_PRODUCTS = [
-    { id: '101', name: 'Coriander (Without Roots)', weight: '100 g', price: '₹13', image: '🌿', rating: 4.5 },
-    { id: '102', name: 'Coriander - Chopped', weight: '100 g', price: '₹22', image: '🥗', rating: 4.2 },
-    { id: '103', name: 'Organically Grown Coriander', weight: '100 g', price: '₹21', image: '🌱', rating: 4.8 },
-];
 
 const RECIPES = [
     { id: 'r1', name: 'Lemon Cilantro Fish Curry', image: '🥘' },
@@ -38,19 +33,19 @@ export default function ProductDetailsScreen() {
     const router = useRouter();
     const insets = useSafeAreaInsets();
     const [detailsExpanded, setDetailsExpanded] = useState(false);
-    const { addToCart, itemCount } = useCart();
+    const [similarProducts, setSimilarProducts] = useState<Product[]>([]);
+    const { addToCart, itemCount, totalAmount } = useCart();
 
     // Animation values
     const entryAnim = useRef(new Animated.Value(0)).current;
 
-    const { id, name, weight, mrp, discountPrice, image, rating, description, originX, originY } = params;
+    const { id, name, weight, mrp, discountPrice, image, image2, image3, expiryDate, categoryId, rating, description, originX, originY } = params;
 
     const startX = originX ? parseFloat(originX as string) : width / 2;
     const startY = originY ? parseFloat(originY as string) : screenHeight / 2;
 
-    const isEmoji = !(image as string)?.startsWith('/');
-    const imageUrl = isEmoji ? null : `${BASE_URL.replace('/api', '')}${image}`;
-    
+    const images = [image, image2, image3].filter(img => img && img !== '') as string[];
+
     const displayPrice = discountPrice ? parseFloat(discountPrice as string) : parseFloat(mrp as string);
     const actualMrp = parseFloat(mrp as string);
     const discountPercent = actualMrp > displayPrice ? Math.round(((actualMrp - displayPrice) / actualMrp) * 100) : 0;
@@ -63,6 +58,24 @@ export default function ProductDetailsScreen() {
         }).start();
     }, []);
 
+    useEffect(() => {
+        if (categoryId) {
+            const loadSimilarProducts = async () => {
+                try {
+                    const result = await fetchProducts({
+                        categoryId: parseInt(categoryId as string),
+                        limit: 10
+                    });
+                    // Filter out current product
+                    setSimilarProducts(result.products.filter(p => p.id.toString() !== id));
+                } catch (error) {
+                    console.error('Failed to load similar products:', error);
+                }
+            };
+            loadSimilarProducts();
+        }
+    }, [categoryId, id]);
+
     const handleAddToCart = () => {
         addToCart({
             id: (id as string) || 'temp_id',
@@ -71,6 +84,21 @@ export default function ProductDetailsScreen() {
             image: (image as string) || '📦',
             weight: (weight as string) || '100g'
         });
+    };
+
+    const renderImage = (img: string, index: number) => {
+        const isEmoji = !img.startsWith('/');
+        const imageUrl = isEmoji ? null : `${BASE_URL.replace('/api', '')}${img}`;
+
+        return (
+            <View key={index} style={styles.imageWrapper}>
+                {isEmoji ? (
+                    <Text style={styles.mainImagePlaceholder}>{img}</Text>
+                ) : (
+                    <Image source={{ uri: imageUrl! }} style={styles.productImage} resizeMode="contain" />
+                )}
+            </View>
+        );
     };
 
     const animatedStyle = {
@@ -129,22 +157,30 @@ export default function ProductDetailsScreen() {
                         <Pressable style={styles.headerIcon}>
                             <Ionicons name="search-outline" size={24} color="#333" />
                         </Pressable>
-                        <Pressable style={styles.headerIcon}>
-                            <Ionicons name="share-social-outline" size={24} color="#333" />
-                        </Pressable>
                     </View>
                 </View>
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-                    {/* Hero Image Section */}
+                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent} style={{ backgroundColor: '#FFF' }}>
+                    {/* Hero Image Section with Horizontal Scroll */}
                     <View style={styles.heroContainer}>
-                        <View style={styles.imageWrapper}>
-                            {isEmoji ? (
-                                <Text style={styles.mainImagePlaceholder}>{image}</Text>
-                            ) : (
-                                <Image source={{ uri: imageUrl! }} style={styles.productImage} resizeMode="contain" />
-                            )}
-                        </View>
+                        <ScrollView
+                            horizontal
+                            pagingEnabled
+                            showsHorizontalScrollIndicator={false}
+                            style={{ width: width }}
+                            contentContainerStyle={{ alignItems: 'center' }}
+                        >
+                            {images.map((img, idx) => renderImage(img, idx))}
+                        </ScrollView>
+
+                        {images.length > 1 && (
+                            <View style={styles.carouselIndicator}>
+                                {images.map((_, idx) => (
+                                    <View key={idx} style={styles.indicatorDot} />
+                                ))}
+                            </View>
+                        )}
+
                         <View style={styles.badgesContainer}>
                             <View style={styles.timerBadge}>
                                 <Ionicons name="timer" size={14} color="#2E7D32" />
@@ -167,7 +203,7 @@ export default function ProductDetailsScreen() {
                             <Text style={styles.currentPrice}>₹{displayPrice}</Text>
                             {discountPercent > 0 && (
                                 <>
-                                    <Text style={styles.mrp}>MRP ₹{actualMrp}</Text>
+                                    <Text style={styles.mrp}>₹{actualMrp}</Text>
                                     <View style={styles.discountBadge}>
                                         <Text style={styles.discountText}>{discountPercent}% OFF</Text>
                                     </View>
@@ -192,33 +228,43 @@ export default function ProductDetailsScreen() {
                                 <Text style={styles.detailText}>
                                     {description || `Fresh and organic ${name}. Sourced directly from local farmers to ensure maximum freshness and quality.`}
                                 </Text>
+                                {expiryDate && (
+                                    <View style={styles.expiryBox}>
+                                        <Ionicons name="calendar-outline" size={16} color="#666" />
+                                        <Text style={styles.expiryText}>Expiry Date: {new Date(expiryDate as string).toLocaleDateString()}</Text>
+                                    </View>
+                                )}
                             </View>
                         )}
                     </View>
 
                     {/* Similar Products Section */}
-                    <View style={styles.section}>
-                        <Text style={styles.sectionTitle}>Similar products</Text>
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
-                            {SIMILAR_PRODUCTS.map((item) => (
-                                <View key={item.id} style={styles.similarCard}>
-                                    <View style={styles.similarImageWrapper}>
-                                        <Text style={styles.similarPlaceholder}>{item.image}</Text>
-                                        <View style={styles.heartSmall}>
-                                            <Ionicons name="heart-outline" size={14} color="#666" />
-                                        </View>
+                    {similarProducts.length > 0 && (
+                        <View style={styles.section}>
+                            <Text style={styles.sectionTitle}>Similar products</Text>
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.horizontalScroll}>
+                                {similarProducts.map((item) => (
+                                    <View key={item.id} style={styles.similarProductWrapper}>
+                                        <ProductCard
+                                            id={item.id.toString()}
+                                            name={item.product_name}
+                                            weight={item.unit || ''}
+                                            price={`₹${item.discount_price || item.price}`}
+                                            image={item.product_image || '🍎'}
+                                            image2={item.image2}
+                                            image3={item.image3}
+                                            expiry_date={item.expiry_date}
+                                            rating={item.rating}
+                                            mrp={item.price}
+                                            discountPrice={item.discount_price}
+                                            description={item.product_description}
+                                            categoryId={item.category_id}
+                                        />
                                     </View>
-                                    <View
-                                        style={styles.addSmall}
-                                    >
-                                        <Text style={styles.addSmallText}>ADD</Text>
-                                    </View>
-                                    <Text style={styles.similarWeight}>{item.weight}</Text>
-                                    <Text style={styles.similarName} numberOfLines={2}>{item.name}</Text>
-                                </View>
-                            ))}
-                        </ScrollView>
-                    </View>
+                                ))}
+                            </ScrollView>
+                        </View>
+                    )}
 
                     {/* Recipes Section */}
                     <View style={styles.section}>
@@ -327,7 +373,7 @@ const styles = StyleSheet.create({
         height: 350,
         justifyContent: 'center',
         alignItems: 'center',
-        backgroundColor: 'transparent',
+        backgroundColor: '#FFF',
     },
     imageWrapper: {
         width: width * 0.9,
@@ -368,19 +414,12 @@ const styles = StyleSheet.create({
     infoSection: {
         padding: 16,
         backgroundColor: '#FFF',
-        borderTopLeftRadius: 24,
-        borderTopRightRadius: 24,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: -4 },
-        shadowOpacity: 0.03,
-        shadowRadius: 10,
-        elevation: 5,
     },
     productName: {
-        fontSize: 22,
-        fontWeight: '800',
-        color: '#111',
-        marginBottom: 4,
+        fontSize: 24,
+        fontWeight: '900',
+        color: '#000',
+        marginBottom: 6,
     },
     stockAlert: {
         fontSize: 14,
@@ -443,22 +482,24 @@ const styles = StyleSheet.create({
         color: '#555',
     },
     section: {
-        marginTop: 24,
-        paddingLeft: 16,
+        marginTop: 10,
+        paddingBottom: 20,
+        backgroundColor: '#FFF',
     },
     sectionTitle: {
         fontSize: 18,
-        fontWeight: '800',
-        color: '#222',
+        fontWeight: '900',
+        color: '#000',
         marginBottom: 16,
+        paddingHorizontal: 16,
     },
     horizontalScroll: {
-        paddingRight: 16,
+        paddingHorizontal: 16, // Changed from paddingRight to paddingHorizontal
+        gap: 12, // Added gap for spacing between items
         paddingBottom: 10,
     },
-    similarCard: {
+    similarProductWrapper: { // New style for ProductCard wrapper
         width: 140,
-        marginRight: 12,
     },
     similarImageWrapper: {
         width: 140,
@@ -618,4 +659,30 @@ const styles = StyleSheet.create({
         color: 'rgba(255, 255, 255, 0.8)',
         fontWeight: '600',
     },
+    carouselIndicator: {
+        flexDirection: 'row',
+        position: 'absolute',
+        bottom: 80,
+        gap: 6,
+    },
+    indicatorDot: {
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+        backgroundColor: 'rgba(0,0,0,0.2)',
+    },
+    expiryBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 8,
+        marginTop: 12,
+        padding: 10,
+        backgroundColor: '#f5f5f5',
+        borderRadius: 8,
+    },
+    expiryText: {
+        fontSize: 14,
+        color: '#666',
+        fontWeight: '700',
+    }
 });

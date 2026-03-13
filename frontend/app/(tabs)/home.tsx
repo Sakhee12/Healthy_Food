@@ -5,10 +5,14 @@ import { OffersBanner } from '@/components/OffersBanner';
 import { ProductCard } from '@/components/ProductCard';
 import { Colors } from '@/constants/theme';
 import { StatusBar } from 'expo-status-bar';
-import React, { useState, useEffect } from 'react';
-import { RefreshControl, ScrollView, StyleSheet, Text, View, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View, ActivityIndicator, Pressable, Animated } from 'react-native';
 import { fetchCategories, Category } from '@/api/category';
 import { fetchProducts, fetchTrendingProducts, Product } from '@/api/product';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCart } from '@/context/CartContext';
+import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
   const [activeCategory, setActiveCategory] = useState('All');
@@ -17,6 +21,13 @@ export default function HomeScreen() {
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
+  
+  const scrollValue = useRef(new Animated.Value(0)).current;
+  const scrollViewRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
+  const { cartItems, itemCount, totalAmount } = useCart();
+  const router = useRouter();
 
   const loadData = async () => {
     try {
@@ -51,6 +62,25 @@ export default function HomeScreen() {
     loadData();
   }, []);
 
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollValue } } }],
+    { 
+      useNativeDriver: false,
+      listener: (event: any) => {
+        const offsetY = event.nativeEvent.contentOffset.y;
+        if (offsetY > 400 && !showScrollTop) {
+          setShowScrollTop(true);
+        } else if (offsetY <= 400 && showScrollTop) {
+          setShowScrollTop(false);
+        }
+      }
+    }
+  );
+
+  const scrollToTop = () => {
+    scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+  };
+
   const getGradientColors = () => {
     switch (activeCategory.toLowerCase()) {
       case 'holi': return Colors.gradients.holi;
@@ -84,10 +114,14 @@ export default function HomeScreen() {
               weight={product.unit || ''}
               price={`₹${product.discount_price || product.price}`}
               image={product.product_image || '🍎'}
+              image2={product.image2}
+              image3={product.image3}
+              expiry_date={product.expiry_date}
               rating={product.rating}
-              mrp={product.price}
+              mrp={product.price || 0}
               discountPrice={product.discount_price}
               description={product.product_description}
+              categoryId={product.category_id}
             />
           ))}
         </ScrollView>
@@ -138,17 +172,21 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <StatusBar style="dark" />
-      <HomeScreenHeader activeCategory={activeCategory} />
-
+      
       <ScrollView
-        stickyHeaderIndices={[0]}
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.healthy.primary} />
         }
       >
-        {/* Sticky Tabs Section */}
+        {/* Scrollable Header */}
+        <HomeScreenHeader activeCategory={activeCategory} />
+
+        {/* Tabs Section (Now scrollable away too) */}
         <View style={[styles.stickyHeader, { backgroundColor: currentGradient[0] }]}>
           <CategoryTabs
             categories={categoryNames}
@@ -173,6 +211,41 @@ export default function HomeScreen() {
           <View style={{ height: 180 }} />
         </View>
       </ScrollView>
+
+      {/* Scroll to Top Button (Now on the right) */}
+      {showScrollTop && (
+        <Pressable 
+          style={[styles.scrollToTop, { bottom: (itemCount > 0 ? 90 : 20) + insets.bottom }]} 
+          onPress={scrollToTop}
+        >
+          <Ionicons name="chevron-up" size={24} color="#fff" />
+        </Pressable>
+      )}
+
+      {/* Floating View Cart Banner */}
+      {itemCount > 0 && (
+        <Pressable 
+          style={[styles.floatingCartBanner, { bottom: insets.bottom + 10 }]}
+          onPress={() => router.push('/cart')}
+        >
+          <View style={styles.cartBannerLeft}>
+            <View style={styles.cartIconBadge}>
+              <Ionicons name="cart" size={18} color="#fff" />
+              <View style={styles.badgeDot}>
+                <Text style={styles.badgeDotText}>{itemCount}</Text>
+              </View>
+            </View>
+            <View>
+              <Text style={styles.cartBannerQty}>{itemCount} ITEM{itemCount > 1 ? 'S' : ''}</Text>
+              <Text style={styles.cartBannerTotal}>₹{totalAmount}</Text>
+            </View>
+          </View>
+          <View style={styles.cartBannerRight}>
+            <Text style={styles.viewCartText}>View Cart</Text>
+            <Ionicons name="chevron-forward" size={16} color="#fff" />
+          </View>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -210,5 +283,87 @@ const styles = StyleSheet.create({
   productRow: {
     paddingHorizontal: 16,
     paddingBottom: 4,
+  },
+  scrollToTop: {
+    position: 'absolute',
+    right: 20,
+    backgroundColor: Colors.healthy.primary,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  floatingCartBanner: {
+    position: 'absolute',
+    left: 12,
+    right: 12,
+    backgroundColor: Colors.healthy.successGreen,
+    borderRadius: 12,
+    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 8,
+  },
+  cartBannerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  cartIconBadge: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  badgeDot: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeDotText: {
+    color: Colors.healthy.successGreen,
+    fontSize: 10,
+    fontWeight: '900',
+  },
+  cartBannerQty: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  cartBannerTotal: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  cartBannerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  viewCartText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });

@@ -41,8 +41,6 @@ const Product = {
             rating,
             search,
             sort,
-            is_featured,
-            is_trending,
             page = 1,
             limit = 12
         } = filters;
@@ -86,16 +84,6 @@ const Product = {
         if (search) {
             conditions.push("p.product_name LIKE ?");
             values.push(`%${search}%`);
-        }
-
-        if (is_featured !== undefined) {
-            conditions.push("p.is_featured = ?");
-            values.push(parseInt(is_featured));
-        }
-
-        if (is_trending !== undefined) {
-            conditions.push("p.is_trending = ?");
-            values.push(parseInt(is_trending));
         }
 
         if (conditions.length > 0) {

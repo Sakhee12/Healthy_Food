@@ -59,16 +59,15 @@ export const HomeScreenHeader: React.FC<HomeScreenHeaderProps> = ({ activeCatego
                 </View>
             </View>
 
-            <View style={styles.searchContainer}>
+            <Pressable 
+                style={styles.searchContainer} 
+                onPress={() => router.push('/search')}
+            >
                 <Ionicons name="search" size={20} color="#333" style={styles.searchIcon} />
-                <TextInput
-                    placeholder='Search "organic honey"'
-                    placeholderTextColor="#666"
-                    style={styles.searchInput}
-                />
+                <Text style={styles.searchPlaceholder}>Search "organic honey"</Text>
                 <View style={styles.searchDivider} />
                 <Ionicons name="mic-outline" size={20} color="#333" style={styles.micIcon} />
-            </View>
+            </Pressable>
         </LinearGradient>
     );
 };
@@ -155,10 +154,10 @@ const styles = StyleSheet.create({
     searchIcon: {
         marginRight: 10,
     },
-    searchInput: {
+    searchPlaceholder: {
         flex: 1,
         fontSize: 16,
-        color: '#000',
+        color: '#666',
         fontWeight: '500',
     },
     searchDivider: {

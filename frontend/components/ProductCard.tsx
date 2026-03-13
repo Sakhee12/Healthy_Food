@@ -12,10 +12,15 @@ interface ProductCardProps {
     weight: string;
     price: string;
     image: string;
+    image2?: string | null;
+    image3?: string | null;
+    expiry_date?: string | null;
     rating: number;
     mrp: number;
     discountPrice?: number | null;
     description: string | null;
+    categoryId?: number | null;
+    containerStyle?: any;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -24,15 +29,23 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     weight,
     price,
     image,
+    image2,
+    image3,
+    expiry_date,
     rating,
     mrp,
     discountPrice,
-    description
+    description,
+    categoryId,
+    containerStyle
 }) => {
     const router = useRouter();
-    const { addToCart } = useCart();
+    const { addToCart, cartItems } = useCart();
     const cardRef = React.useRef<View>(null);
 
+    const isInCart = cartItems.some(item => item.id === id);
+
+    const [isLiked, setIsLiked] = React.useState(false);
     const [imgError, setImgError] = React.useState(false);
 
     const isEmoji = !image.startsWith('/');
@@ -43,16 +56,21 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             cardRef.current.measure((x, y, width, height, pageX, pageY) => {
                 const centerX = pageX + width / 2;
                 const centerY = pageY + height / 2;
-                
+
                 router.push({
                     pathname: '/product/[id]',
-                    params: { 
-                        id, 
-                        name, 
-                        weight, 
+                    params: {
+                        id,
+                        name,
+                        weight,
                         mrp: mrp.toString(),
                         discountPrice: (discountPrice || mrp).toString(),
-                        image, 
+                        image,
+                        // Pass additional images if available
+                        image2: image2 || '',
+                        image3: image3 || '',
+                        expiryDate: expiry_date || '',
+                        categoryId: categoryId?.toString() || '',
                         rating: rating.toString(),
                         description: description || '',
                         originX: centerX.toString(),
@@ -63,30 +81,51 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         }
     };
 
-    const handleAdd = (e: any) => {
+    const handleAction = (e: any) => {
         e.stopPropagation();
-        addToCart({ id, name, weight, price, image });
+        if (isInCart) {
+            router.push('/cart');
+        } else {
+            addToCart({ id, name, weight, price, image });
+        }
+    };
+
+    const toggleLike = (e: any) => {
+        e.stopPropagation();
+        setIsLiked(!isLiked);
     };
 
     const hasDiscount = discountPrice && discountPrice < mrp;
 
     return (
-        <Pressable 
+        <Pressable
             ref={cardRef as any}
-            style={styles.card} 
+            style={[styles.card, containerStyle]}
             onPress={handlePress}
         >
             <View style={styles.imageContainer}>
                 {isEmoji || imgError ? (
                     <Text style={styles.placeholderImage}>{isEmoji ? image : '🍎'}</Text>
                 ) : (
-                    <Image 
-                        source={{ uri: imageUrl! }} 
-                        style={styles.productImage} 
+                    <Image
+                        source={{ uri: imageUrl! }}
+                        style={styles.productImage}
                         resizeMode="contain"
                         onError={() => setImgError(true)}
                     />
                 )}
+
+                {/* Heart / Like Button */}
+                <Pressable
+                    onPress={toggleLike}
+                    style={styles.heartButton}
+                >
+                    <Ionicons
+                        name={isLiked ? "heart" : "heart-outline"}
+                        size={18}
+                        color={isLiked ? "#FF4B4B" : "#666"}
+                    />
+                </Pressable>
             </View>
 
             <View style={styles.details}>
@@ -102,19 +141,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
                 <View style={styles.footer}>
                     <View>
-                        <View style={styles.priceRow}>
-                            <Text style={styles.price}>{price}</Text>
+                        <View style={styles.priceColumn}>
+                            <Text style={styles.price}>₹{discountPrice || mrp}</Text>
                             {hasDiscount && (
-                                <Text style={styles.mrp}>₹{mrp}</Text>
+                                <Text style={styles.mrp}>{mrp}</Text>
                             )}
                         </View>
                         <View style={styles.ratingRow}>
                             <Ionicons name="star" size={10} color={Colors.healthy.yellow} />
-                            <Text style={styles.ratingValue}>{rating}</Text>
+                            <Text style={styles.ratingValue}>{rating || '0.0'}</Text>
                         </View>
                     </View>
-                    <Pressable style={styles.addButton} onPress={handleAdd}>
-                        <Text style={styles.addButtonText}>ADD</Text>
+                    <Pressable
+                        style={[styles.addButton, isInCart && styles.viewButton]}
+                        onPress={handleAction}
+                    >
+                        <Text style={[styles.addButtonText, isInCart && styles.viewButtonText]}>
+                            {isInCart ? 'VIEW' : 'ADD'}
+                        </Text>
                     </Pressable>
                 </View>
             </View>
@@ -126,17 +170,36 @@ const styles = StyleSheet.create({
     card: {
         backgroundColor: Colors.healthy.white,
         borderRadius: 12,
-        width: 156,
-        marginRight: 10,
+        width: 140,
+        height: 280,
+        marginVertical: 8,
+        marginHorizontal: 2,
         borderWidth: 1,
         borderColor: '#f0f0f0',
         overflow: 'hidden',
     },
     imageContainer: {
-        height: 140,
+        height: 120,
         backgroundColor: '#f8f8f8',
         justifyContent: 'center',
         alignItems: 'center',
+        position: 'relative',
+    },
+    heartButton: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.8)',
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.1,
+        shadowRadius: 2,
+        elevation: 2,
     },
     placeholderImage: {
         fontSize: 70,
@@ -185,24 +248,23 @@ const styles = StyleSheet.create({
         alignItems: 'flex-end',
     },
     price: {
-        fontSize: 13,
+        fontSize: 14,
         fontWeight: '900',
         color: '#000',
     },
-    priceRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 4,
+    priceColumn: {
+        flexDirection: 'column',
     },
     mrp: {
         fontSize: 10,
-        textDecorationLine: 'line-through',
         color: '#999',
+        textDecorationLine: 'line-through',
     },
     ratingRow: {
         flexDirection: 'row',
         alignItems: 'center',
         gap: 2,
+        marginTop: 2,
     },
     ratingValue: {
         fontSize: 10,
@@ -227,4 +289,11 @@ const styles = StyleSheet.create({
         fontWeight: '900',
         color: Colors.healthy.successGreen,
     },
+    viewButton: {
+        backgroundColor: Colors.healthy.successGreen,
+        borderColor: Colors.healthy.successGreen,
+    },
+    viewButtonText: {
+        color: Colors.healthy.white,
+    }
 });
