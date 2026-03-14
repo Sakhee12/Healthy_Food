@@ -16,6 +16,8 @@ const columnHelper = createColumnHelper();
 function ViewProducts() {
     const [data, setData] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
+    const [subcategories, setSubcategories] = useState([]);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
@@ -27,7 +29,11 @@ function ViewProducts() {
 
     // Get user role for permissions
     const user = JSON.parse(localStorage.getItem("user") || "{}");
-    const userRole = user?.role?.toLowerCase() || "";
+    const userRole = (user?.role || "").toLowerCase().replace(/\s+/g, "");
+
+    useEffect(() => {
+        console.log("Current User Role:", userRole);
+    }, [userRole]);
 
     const canAdd = ["superadmin", "admin", "manager"].includes(userRole);
     const canEdit = ["superadmin", "admin", "manager"].includes(userRole);
@@ -36,11 +42,12 @@ function ViewProducts() {
     const [formData, setFormData] = useState({
         product_name: "",
         category_id: "",
+        subcategory_id: "",
         price: "",
         discount_price: "",
         stock: "",
         product_description: "",
-        brand: "",
+        brand_id: "",
         unit: "",
         rating: 0,
         review_count: 0,
@@ -55,14 +62,28 @@ function ViewProducts() {
         image3_file: null
     });
 
-    const fetchCategories = async () => {
+    const fetchMetadata = async () => {
         try {
-            const response = await adminService.getAllCategories();
-            setCategories(response.data);
+            const [catRes, brandRes] = await Promise.all([
+                adminService.getAllCategories(),
+                adminService.getAllBrands()
+            ]);
+            setCategories(catRes.data);
+            setBrands(brandRes.data);
         } catch (error) {
-            console.error("Error fetching categories:", error);
+            console.error("Error fetching metadata:", error);
         }
     };
+
+    useEffect(() => {
+        if (formData.category_id) {
+            adminService.getSubcategoriesByCategory(formData.category_id)
+                .then(res => setSubcategories(res.data))
+                .catch(err => console.error("Error fetching subcategories:", err));
+        } else {
+            setSubcategories([]);
+        }
+    }, [formData.category_id]);
 
     const fetchProducts = async () => {
         setLoading(true);
@@ -87,7 +108,7 @@ function ViewProducts() {
     }, [page]);
 
     useEffect(() => {
-        fetchCategories();
+        fetchMetadata();
     }, []);
 
     const handleSubmit = async (e) => {
@@ -143,8 +164,8 @@ function ViewProducts() {
 
     const resetForm = () => {
         setFormData({
-            product_name: "", category_id: "", price: "", discount_price: "", stock: "",
-            product_description: "", brand: "", unit: "", rating: 0, review_count: 0,
+            product_name: "", category_id: "", subcategory_id: "", price: "", discount_price: "", stock: "",
+            product_description: "", brand_id: "", unit: "", rating: 0, review_count: 0,
             is_featured: 0, is_trending: 0, expiry_date: "",
             product_image: "", image2: "", image3: "",
             product_image_file: null, image2_file: null, image3_file: null
@@ -156,11 +177,12 @@ function ViewProducts() {
         setFormData({
             product_name: product.product_name || "",
             category_id: product.category_id || "",
+            subcategory_id: product.subcategory_id || "",
             price: product.price || "",
             discount_price: product.discount_price || "",
             stock: product.stock || "",
             product_description: product.product_description || "",
-            brand: product.brand || "",
+            brand_id: product.brand_id || "",
             unit: product.unit || "",
             rating: product.rating || 0,
             review_count: product.review_count || 0,
@@ -240,14 +262,24 @@ function ViewProducts() {
         }),
         columnHelper.accessor("price", {
             header: () => <p className="text-sm font-bold text-gray-600">PRICE</p>,
+            cell: (info) => <p className="text-sm font-bold text-navy-700">₹{info.getValue()}</p>,
+        }),
+        columnHelper.accessor("discount_price", {
+            header: () => <p className="text-sm font-bold text-gray-600">DISCOUNT</p>,
+            cell: (info) => <p className="text-sm font-bold text-green-500">₹{info.getValue() || 0}</p>,
+        }),
+        columnHelper.accessor("rating", {
+            header: () => <p className="text-sm font-bold text-gray-600">RATING</p>,
             cell: (info) => (
-                <div>
-                    <p className="text-sm font-bold text-navy-700">₹{info.getValue()}</p>
-                    {info.row.original.discount_price > 0 && (
-                        <p className="text-xs text-green-500 font-bold">₹{info.row.original.discount_price}</p>
-                    )}
+                <div className="flex items-center gap-1">
+                    <span className="text-sm font-bold text-navy-700">{info.getValue() || 0}</span>
+                    <span className="text-orange-400">★</span>
                 </div>
             ),
+        }),
+        columnHelper.accessor("review_count", {
+            header: () => <p className="text-sm font-bold text-gray-600">REVIEWS</p>,
+            cell: (info) => <p className="text-sm font-bold text-navy-700">{info.getValue() || 0}</p>,
         }),
         columnHelper.accessor("stock", {
             header: () => <p className="text-sm font-bold text-gray-600">STOCK</p>,
@@ -267,10 +299,32 @@ function ViewProducts() {
             id: "actions",
             header: () => <p className="text-sm font-bold text-gray-600">ACTIONS</p>,
             cell: (info) => (
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setViewingProduct(info.row.original)} className="text-xl text-gray-500 hover:text-navy-700" title="View"><MdVisibility /></button>
-                    {canEdit && <button onClick={() => handleEdit(info.row.original)} className="text-xl text-brand-500 hover:text-brand-600" title="Edit"><MdEdit /></button>}
-                    {canDelete && <button onClick={() => handleDelete(info.row.original.id)} className="text-xl text-red-500 hover:text-red-600" title="Delete"><MdDelete /></button>}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setViewingProduct(info.row.original)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 text-xl text-gray-500 transition-all hover:scale-110 hover:bg-gray-100 active:scale-95"
+                        title="View Details"
+                    >
+                        <MdVisibility />
+                    </button>
+                    {canEdit && (
+                        <button
+                            onClick={() => handleEdit(info.row.original)}
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-xl text-brand-500 transition-all hover:scale-110 hover:bg-brand-100 active:scale-95"
+                            title="Edit"
+                        >
+                            <MdEdit />
+                        </button>
+                    )}
+                    {canDelete && (
+                        <button
+                            onClick={() => handleDelete(info.row.original.id)}
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-xl text-red-500 transition-all hover:scale-110 hover:bg-red-100 active:scale-95"
+                            title="Delete"
+                        >
+                            <MdDelete />
+                        </button>
+                    )}
                 </div>
             ),
         }),
@@ -301,8 +355,8 @@ function ViewProducts() {
                     )}
                 </header>
 
-                <div className="mt-8 overflow-x-scroll">
-                    <table className="w-full">
+                <div className="mt-8 overflow-x-auto">
+                    <table className="w-full min-w-[1200px]">
                         <thead>
                             {table.getHeaderGroups().map(headerGroup => (
                                 <tr key={headerGroup.id} className="!border-px !border-gray-400">
@@ -364,7 +418,19 @@ function ViewProducts() {
                                 <InputField label="Product Name *" id="product_name" type="text" value={formData.product_name} onChange={(e) => setFormData({ ...formData, product_name: e.target.value })} required />
 
                                 <div className="grid grid-cols-2 gap-4">
-                                    <InputField label="Brand" id="brand" type="text" value={formData.brand} onChange={(e) => setFormData({ ...formData, brand: e.target.value })} />
+                                    <div>
+                                        <label className="text-sm font-bold text-navy-700 dark:text-white ml-2">Brand</label>
+                                        <select
+                                            className="mt-2 flex w-full rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white dark:bg-navy-900"
+                                            value={formData.brand_id}
+                                            onChange={(e) => setFormData({ ...formData, brand_id: e.target.value })}
+                                        >
+                                            <option value="">Select Brand...</option>
+                                            {brands.map(b => (
+                                                <option key={b.id} value={b.id}>{b.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <InputField label="Unit (e.g. 1kg, 500g)" id="unit" type="text" value={formData.unit} onChange={(e) => setFormData({ ...formData, unit: e.target.value })} />
                                 </div>
 
@@ -373,8 +439,12 @@ function ViewProducts() {
                                     <InputField label="Discount Price" id="discount_price" type="number" step="0.01" value={formData.discount_price} onChange={(e) => setFormData({ ...formData, discount_price: e.target.value })} />
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <InputField label="Stock" id="stock" type="number" value={formData.stock} onChange={(e) => setFormData({ ...formData, stock: e.target.value })} />
+                                    <InputField label="Rating" id="rating" type="number" step="0.1" min="0" max="5" value={formData.rating} onChange={(e) => setFormData({ ...formData, rating: e.target.value })} />
+                                    <InputField label="Reviews" id="review_count" type="number" value={formData.review_count} onChange={(e) => setFormData({ ...formData, review_count: e.target.value })} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-bold text-navy-700 dark:text-white ml-2">Category *</label>
                                         <select
@@ -386,6 +456,19 @@ function ViewProducts() {
                                             <option value="">Select Category</option>
                                             {categories.map(cat => (
                                                 <option key={cat.id} value={cat.id}>{cat.category_name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label className="text-sm font-bold text-navy-700 dark:text-white ml-2">Subcategory</label>
+                                        <select
+                                            className="mt-2 flex w-full rounded-xl border border-gray-200 bg-white/0 p-3 text-sm outline-none dark:!border-white/10 dark:text-white dark:bg-navy-900"
+                                            value={formData.subcategory_id}
+                                            onChange={(e) => setFormData({ ...formData, subcategory_id: e.target.value })}
+                                        >
+                                            <option value="">Select Subcategory...</option>
+                                            {subcategories.map(sub => (
+                                                <option key={sub.id} value={sub.id}>{sub.name}</option>
                                             ))}
                                         </select>
                                     </div>
@@ -486,6 +569,17 @@ function ViewProducts() {
                                         <div>
                                             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Inventory</p>
                                             <p className={`text-lg font-bold ${viewingProduct.stock > 10 ? 'text-green-500' : 'text-red-500'}`}>{viewingProduct.stock} units</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-10">
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Rating</p>
+                                            <p className="text-lg font-bold text-navy-700 dark:text-white">{viewingProduct.rating || 0} <span className="text-orange-400">★</span></p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Reviews</p>
+                                            <p className="text-lg font-bold text-navy-700 dark:text-white">{viewingProduct.review_count || 0}</p>
                                         </div>
                                     </div>
 

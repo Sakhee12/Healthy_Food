@@ -3,7 +3,7 @@ import Navbar from "components/navbar";
 import Sidebar from "components/sidebar";
 import React from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
-import routes from "routes.js";
+import routes from "routes";
 
 export default function Admin(props) {
   const { ...rest } = props;
@@ -101,15 +101,17 @@ export default function Admin(props) {
               secondary={getActiveNavbar(routes)}
               {...rest}
             />
-            <div className="pt-5s mx-auto mb-auto h-full min-h-[84vh] p-2 md:pr-2">
-              <Routes>
-                {getRoutes(routes)}
+            <div className="mx-auto mb-auto h-full min-h-[84vh] p-2 pt-5 md:pr-2">
+              <React.Suspense fallback={<div className="flex h-full w-full items-center justify-center font-bold text-navy-700">Loading component...</div>}>
+                <Routes>
+                  {getRoutes(routes)}
 
-                <Route
-                  path="/"
-                  element={<Navigate to="/admin/default" replace />}
-                />
-              </Routes>
+                  <Route
+                    path="/"
+                    element={<Navigate to="/admin/default" replace />}
+                  />
+                </Routes>
+              </React.Suspense>
             </div>
             <div className="p-3">
               <Footer />

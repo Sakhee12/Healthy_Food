@@ -1,10 +1,15 @@
-
 // Admin Imports
-import ViewCategories from "views/admin/category/ViewCategories";
-import MainDashboard from "views/admin/default";
-import ViewProducts from "views/admin/product/ViewProducts";
-import Profile from "views/admin/profile";
-import AdminManagement from "views/admin/admin-management/AdminManagement";
+const ViewCategories = lazy(() => import("views/admin/category/ViewCategories"));
+const MainDashboard = lazy(() => import("views/admin/default"));
+const ViewProducts = lazy(() => import("views/admin/product/ViewProducts"));
+const Profile = lazy(() => import("views/admin/profile"));
+const AdminManagement = lazy(() => import("views/admin/admin-management/AdminManagement"));
+import { lazy } from "react";
+const CartManagement = lazy(() => import("views/admin/cart-management/CartManagement"));
+const ViewSections = lazy(() => import("views/admin/section/ViewSections"));
+const ViewBrands = lazy(() => import("views/admin/brand/ViewBrands"));
+const ViewSubcategories = lazy(() => import("views/admin/subcategory/ViewSubcategories"));
+const ViewVariants = lazy(() => import("views/admin/variant/ViewVariants"));
 
 // Auth Imports
 import Placeholder from "views/admin/Placeholder";
@@ -47,7 +52,19 @@ const routes = [
       { name: "View Products", path: "view", component: <ViewProducts />, roles: ["superadmin", "admin", "manager", "inventory_manager"] },
       { name: "Add Product", path: "add", component: <ViewProducts />, roles: ["superadmin", "admin", "manager"] },
       { name: "Inventory", path: "inventory", component: <Placeholder title="Inventory" />, roles: ["superadmin", "admin", "manager", "inventory_manager"] },
+      { name: "Product Variants", path: "variants", component: <ViewVariants />, roles: ["superadmin", "admin", "manager", "inventory_manager"] },
       { name: "Product Reviews", path: "reviews", component: <Placeholder title="Product Reviews" />, roles: ["superadmin", "admin", "manager"] },
+    ]
+  },
+  {
+    name: "Section Management",
+    layout: "/admin",
+    icon: <MdCategory className="h-6 w-6" />,
+    path: "sections",
+    roles: ["superadmin", "admin"],
+    children: [
+      { name: "View Sections", path: "view", component: <ViewSections />, roles: ["superadmin", "admin"] },
+      { name: "Add Section", path: "add", component: <ViewSections />, roles: ["superadmin", "admin"] },
     ]
   },
   {
@@ -58,7 +75,17 @@ const routes = [
     roles: ["superadmin", "admin"],
     children: [
       { name: "View Categories", path: "view", component: <ViewCategories />, roles: ["superadmin", "admin"] },
-      { name: "Add Category", path: "add", component: <ViewCategories />, roles: ["superadmin", "admin"] },
+      { name: "Subcategories", path: "subcategories", component: <ViewSubcategories />, roles: ["superadmin", "admin"] },
+    ]
+  },
+  {
+    name: "Brand Management",
+    layout: "/admin",
+    icon: <MdCategory className="h-6 w-6" />,
+    path: "brands",
+    roles: ["superadmin", "admin", "manager"],
+    children: [
+      { name: "View Brands", path: "view", component: <ViewBrands />, roles: ["superadmin", "admin", "manager"] },
     ]
   },
   {
@@ -129,6 +156,14 @@ const routes = [
       { name: "Order Report", path: "order-report", component: <Placeholder title="Order Report" />, roles: ["superadmin", "admin"] },
       { name: "Top Selling Fruits", path: "top-selling", component: <Placeholder title="Top Selling" />, roles: ["superadmin", "admin"] },
     ]
+  },
+  {
+    name: "Cart Monitoring",
+    layout: "/admin",
+    icon: <MdOutlineShoppingCart className="h-6 w-6" />,
+    path: "carts",
+    component: <CartManagement />,
+    roles: ["superadmin", "admin"]
   },
   {
     name: "Notifications",

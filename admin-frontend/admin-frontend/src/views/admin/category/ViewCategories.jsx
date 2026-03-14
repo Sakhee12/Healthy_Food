@@ -198,10 +198,32 @@ function ViewCategories() {
             id: "actions",
             header: () => <p className="text-sm font-bold text-gray-600">ACTIONS</p>,
             cell: (info) => (
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setViewingCategory(info.row.original)} className="text-xl text-gray-500 hover:text-navy-700 transition-all hover:scale-110" title="View Details"><MdVisibility /></button>
-                    {canManage && <button onClick={() => handleEdit(info.row.original)} className="text-xl text-brand-500 hover:text-brand-600 transition-all hover:scale-110" title="Edit"><MdEdit /></button>}
-                    {canManage && <button onClick={() => handleDelete(info.row.original.id)} className="text-xl text-red-500 hover:text-red-600 transition-all hover:scale-110" title="Delete"><MdDelete /></button>}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setViewingCategory(info.row.original)}
+                        className="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-50 text-xl text-gray-500 transition-all hover:scale-110 hover:bg-gray-100 active:scale-95"
+                        title="View Details"
+                    >
+                        <MdVisibility />
+                    </button>
+                    {canManage && (
+                        <button
+                            onClick={() => handleEdit(info.row.original)}
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-xl text-brand-500 transition-all hover:scale-110 hover:bg-brand-100 active:scale-95"
+                            title="Edit"
+                        >
+                            <MdEdit />
+                        </button>
+                    )}
+                    {canManage && (
+                        <button
+                            onClick={() => handleDelete(info.row.original.id)}
+                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50 text-xl text-red-500 transition-all hover:scale-110 hover:bg-red-100 active:scale-95"
+                            title="Delete"
+                        >
+                            <MdDelete />
+                        </button>
+                    )}
                 </div>
             ),
         }),

@@ -5,6 +5,7 @@ db.query("DESCRIBE products", (err, results) => {
         console.error("Error describing products:", err);
         process.exit(1);
     }
+    
     console.log("Columns in 'products' table:");
     console.table(results.map(r => ({ Field: r.Field, Type: r.Type })));
 

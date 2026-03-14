@@ -59,7 +59,7 @@ const Category = {
 
         const updatableFields = [
             'category_name', 'slug', 'description', 'category_image',
-            'banner_image', 'parent_id', 'display_order', 'status'
+            'banner_image', 'parent_id', 'display_order', 'status', 'section_id'
         ];
 
         updatableFields.forEach(field => {
@@ -80,6 +80,34 @@ const Category = {
     // Delete category
     delete: (id, callback) => {
         db.query("DELETE FROM categories WHERE id = ?", [id], callback);
+    },
+
+    // Get categories as a tree (Main -> Subcategories)
+    getTree: (callback) => {
+        const sql = "SELECT * FROM categories ORDER BY display_order ASC";
+        db.query(sql, (err, rows) => {
+            if (err) return callback(err);
+
+            // Build tree structure
+            const categoryMap = {};
+            const tree = [];
+
+            // First pass: Map all categories
+            rows.forEach(row => {
+                categoryMap[row.id] = { ...row, subcategories: [] };
+            });
+
+            // Second pass: Populate subcategories or root
+            rows.forEach(row => {
+                if (row.parent_id && categoryMap[row.parent_id]) {
+                    categoryMap[row.parent_id].subcategories.push(categoryMap[row.id]);
+                } else {
+                    tree.push(categoryMap[row.id]);
+                }
+            });
+
+            callback(null, tree);
+        });
     }
 };
 

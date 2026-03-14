@@ -45,6 +45,43 @@ export const adminService = {
     // Order Management
     getAllOrders: () => API.get("/admin/orders"),
     updateOrderStatus: (id, status) => API.put(`/admin/orders/update-status`, { id, status }),
+
+    // Cart Monitoring
+    getAllCarts: () => API.get("/admin/carts"),
+    getCartDetails: (id) => API.get(`/admin/carts/${id}`),
+
+    // Extensions
+    // Sections
+    getAllSections: () => API.get("/catalog/sections"),
+    getSectionById: (id) => API.get(`/catalog/sections/${id}`),
+    addSection: (data) => API.post("/catalog/sections", data),
+    updateSection: (id, data) => API.put(`/catalog/sections/${id}`, data),
+    deleteSection: (id) => API.delete(`/catalog/sections/${id}`),
+
+    // Subcategories
+    getAllSubcategories: () => API.get("/subcategories"),
+    getSubcategoriesByCategory: (categoryId) => API.get(`/subcategories/category/${categoryId}`),
+    addSubcategory: (data) => API.post("/subcategories", data),
+    updateSubcategory: (id, data) => API.put(`/subcategories/${id}`, data),
+    deleteSubcategory: (id) => API.delete(`/subcategories/${id}`),
+
+    // Brands
+    getAllBrands: () => API.get("/brands"),
+    addBrand: (data) => API.post("/brands", data),
+    updateBrand: (id, data) => API.put(`/brands/${id}`, data),
+    deleteBrand: (id) => API.delete(`/brands/${id}`),
+
+    // Product Variants
+    getAllVariants: () => API.get("/product-variants"),
+    getVariantsByProduct: (productId) => API.get(`/product-variants/product/${productId}`),
+    addVariant: (data) => API.post("/product-variants", data),
+    updateVariant: (id, data) => API.put(`/product-variants/${id}`, data),
+    deleteVariant: (id) => API.delete(`/product-variants/${id}`)
+};
+
+export const publicService = {
+    getSections: () => API.get("/sections"),
+    getSectionProducts: (id) => API.get(`/sections/${id}/products`),
 };
 
 export default API;

@@ -8,7 +8,10 @@ const {
     getAllCategories,
     addCategory,
     updateCategory,
-    deleteCategory
+    deleteCategory,
+    getCategoryTree,
+    getAllCarts,
+    getCartById
 } = require("../controllers/adminController");
 const { authorizeRoles, authenticateOptional } = require("../middlewares/authMiddleware");
 const upload = require("../middlewares/uploadMiddleware");
@@ -24,7 +27,8 @@ router.delete("/delete-user/:id", superAdminAndAdmin, deleteUser);
 router.get("/roles", superAdminAndAdmin, getRoles);
 
 // Category Management
-router.get("/categories", authenticateOptional, getAllCategories); // Optional auth to catch user details if logged in
+router.get("/categories", authenticateOptional, getAllCategories);
+router.get("/category-tree", authenticateOptional, getCategoryTree); // New tree route
 router.post("/categories/add", authenticateOptional, upload.fields([
     { name: 'category_image_file', maxCount: 1 },
     { name: 'banner_image_file', maxCount: 1 }
@@ -38,5 +42,9 @@ router.delete("/categories/delete/:id", authenticateOptional, deleteCategory);
 // Order Management (Super Admin, Admin & Manager)
 router.get("/orders", allAdminsAndManagers, (req, res) => res.json([]));
 router.put("/orders/update-status", allAdminsAndManagers, (req, res) => res.json({ message: "Order status updated" }));
+
+// Cart Monitoring
+router.get("/carts", superAdminAndAdmin, getAllCarts);
+router.get("/carts/:id", superAdminAndAdmin, getCartById);
 
 module.exports = router;

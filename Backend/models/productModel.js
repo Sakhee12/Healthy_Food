@@ -132,12 +132,12 @@ const Product = {
         const fields = [];
         const values = [];
 
-        // List of updatable fields from schema
         const updatableFields = [
             'product_name', 'category_id', 'product_description', 'brand',
             'price', 'discount_price', 'stock', 'unit',
             'product_image', 'image2', 'image3',
-            'rating', 'review_count', 'is_featured', 'is_trending', 'expiry_date'
+            'rating', 'review_count', 'is_featured', 'is_trending', 'expiry_date',
+            'subcategory_id', 'brand_id'
         ];
 
         updatableFields.forEach(field => {

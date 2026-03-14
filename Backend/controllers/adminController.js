@@ -1,6 +1,7 @@
 // Version: 1.0.1 - Clean
 const User = require("../models/userModel");
 const Category = require("../models/categoryModel");
+const Cart = require("../models/cartModel");
 
 // Get all users
 exports.getAllUsers = (req, res) => {
@@ -16,6 +17,13 @@ exports.getAllCategories = (req, res) => {
     Category.getAll(filters, (err, categories) => {
         if (err) return res.status(500).json({ message: "DB error", error: err });
         res.json(categories);
+    });
+};
+
+exports.getCategoryTree = (req, res) => {
+    Category.getTree((err, tree) => {
+        if (err) return res.status(500).json({ message: "DB error", error: err });
+        res.json(tree);
     });
 };
 
@@ -69,6 +77,32 @@ exports.getRoles = (req, res) => {
     db.query("SELECT * FROM roles", (err, roles) => {
         if (err) return res.status(500).json({ message: "DB error", error: err });
         res.json(roles);
+    });
+};
+
+// --- Admin Cart Management ---
+
+// Get all carts
+exports.getAllCarts = (req, res) => {
+    const db = require("../config/db");
+    const sql = `
+        SELECT c.*, u.name as user_name, u.email as user_email
+        FROM carts c
+        JOIN users u ON c.user_id = u.id
+        ORDER BY c.updated_at DESC
+    `;
+    db.query(sql, (err, carts) => {
+        if (err) return res.status(500).json({ message: "Error fetching carts", error: err });
+        res.json(carts);
+    });
+};
+
+// Get specific cart details
+exports.getCartById = (req, res) => {
+    const { id } = req.params;
+    Cart.getItems(id, (err, items) => {
+        if (err) return res.status(500).json({ message: "Error fetching cart items" });
+        res.json(items);
     });
 };
 

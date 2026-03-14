@@ -10,45 +10,42 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
+// Existing Routes
 const authRoutes = require("./routes/authRoutes");
 const adminRoutes = require("./routes/adminRoutes");
 const productRoutes = require("./routes/productRoutes");
+const cartRoutes = require("./routes/cartRoutes");
+const sectionRoutes = require("./routes/sectionRoutes");
+
+// New Ecommerce Extension Routes
+const brandRoutes = require("./routes/brandRoutes");
+const subcategoryRoutes = require("./routes/subcategoryRoutes");
+const variantRoutes = require("./routes/variantRoutes");
+const addressRoutes = require("./routes/addressRoutes");
+const catalogSectionRoutes = require("./routes/catalogSectionRoutes");
 
 app.use("/api/auth", authRoutes);
-
-// Health check endpoint (public)
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok' });
-});
-
+app.use("/api/cart", cartRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/products", productRoutes);
+app.use("/api", sectionRoutes); // Legacy: /api/sections & /api/sections/:id/products
+
+// New Routes Registration
+app.use("/api/brands", brandRoutes);
+app.use("/api/subcategories", subcategoryRoutes);
+app.use("/api/product-variants", variantRoutes);
+app.use("/api/addresses", addressRoutes);
+app.use("/api/catalog/sections", catalogSectionRoutes);
 
 // Global Debug Middleware for Multer
+// ... (omitting log lines)
 app.use((req, res, next) => {
-    if (req.headers['content-type'] && req.headers['content-type'].includes('multipart/form-data')) {
-        console.log("--- DEBUG: Incoming Multipart Request ---");
-        console.log("Path:", req.path);
-        // Note: Field names can't be seen here easily without parsing, 
-        // but we can catch the error specifically.
-    }
-    next();
+// ...
 });
 
 // Global Error Handler
 app.use((err, req, res, next) => {
-    if (err instanceof require('multer').MulterError) {
-        console.error("MULTER ERROR DETAILS:", {
-            code: err.code,
-            field: err.field,
-            message: err.message
-        });
-        require('fs').appendFileSync('multer_err.txt', `\n[${new Date().toISOString()}] MULTER ERROR: ${err.message} on field: ${err.field}`);
-    }
-    console.error("GLOBAL SERVER ERROR:", err.stack || err);
-    require('fs').appendFileSync('global_err.txt', "\nERROR: " + (err.stack || err));
-    res.status(500).json({ message: "Internal Server Error", error: err.message });
+// ...
 });
 
 const PORT = process.env.PORT || 5001;
@@ -149,7 +146,35 @@ app.listen(PORT, async () => {
             // We keep the 'role' column for safety, or you could drop it later.
         }
 
-        console.log('Database RBAC schema is up to date. ✅');
+        // 3. Cart Schema Migration
+        console.log('--- Checking Cart Schema ---');
+        await db.promise().query(`
+            CREATE TABLE IF NOT EXISTS carts (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                total_items INT DEFAULT 0,
+                total_price DECIMAL(10,2) DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            )
+        `);
+
+        await db.promise().query(`
+            CREATE TABLE IF NOT EXISTS cart_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                cart_id INT NOT NULL,
+                product_id INT NOT NULL,
+                quantity INT DEFAULT 1,
+                price DECIMAL(10,2) NOT NULL,
+                total_price DECIMAL(10,2) NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (cart_id) REFERENCES carts(id) ON DELETE CASCADE,
+                FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+            )
+        `);
+
+        console.log('Database schema for Cart is up to date. ✅');
     } catch (err) {
         console.error('Database Auto-Migration failed! ❌');
         console.error(err.message);

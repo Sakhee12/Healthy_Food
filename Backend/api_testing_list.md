@@ -35,6 +35,12 @@ Base URL: `http://localhost:5001/api`
 | GET | `/admin/orders` | List all orders | superadmin, admin, manager |
 | PUT | `/admin/orders/update-status` | Update order status | superadmin, admin, manager |
 
+## Sections (`/sections`)
+| Method | Endpoint | Description | Auth Required |
+| :--- | :--- | :--- | :--- |
+| GET | `/sections` | Get main categories (parent_id IS NULL) | No |
+| GET | `/sections/:id/products` | Get products by section (and subcategories) | No |
+
 ## Other
 | Method | Endpoint | Description | Auth Required |
 | :--- | :--- | :--- | :--- |
